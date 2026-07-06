@@ -14,12 +14,31 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
+import {
+  registerAllowedUser,
+  signInAllowedUser,
+} from "@/features/auth/actions";
 import { cn } from "@/lib/utils";
 
 type AuthMode = "sign-in" | "sign-up";
 
-export function LoginForm() {
+type LoginFormProps = {
+  registrationOpen: boolean;
+};
+
+function getCallbackMessage(error: string | null) {
+  if (error === "unauthorized") {
+    return "Access is restricted to the app owner.";
+  }
+
+  if (error === "auth_callback_failed") {
+    return "Authentication failed. Please try again.";
+  }
+
+  return null;
+}
+
+export function LoginForm({ registrationOpen }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/dashboard";
@@ -28,9 +47,7 @@ export function LoginForm() {
   const [mode, setMode] = useState<AuthMode>("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState<string | null>(
-    callbackError ? "Authentication failed. Please try again." : null
-  );
+  const [message, setMessage] = useState<string | null>(getCallbackMessage(callbackError));
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -38,50 +55,31 @@ export function LoginForm() {
     setMessage(null);
     setIsLoading(true);
 
-    const supabase = createClient();
-
     try {
-      if (mode === "sign-in") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const result =
+        mode === "sign-in"
+          ? await signInAllowedUser(email, password)
+          : await registerAllowedUser(email, password);
 
-        if (error) {
-          setMessage(error.message);
-          return;
-        }
-
-        router.push(next);
-        router.refresh();
+      if (!result.success) {
+        setMessage(result.error ?? "Authentication failed.");
         return;
       }
 
-      const { error, data } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-        },
-      });
-
-      if (error) {
-        setMessage(error.message);
+      if (result.error) {
+        setMessage(result.error);
+        setMode("sign-in");
         return;
       }
 
-      if (data.session) {
-        router.push(next);
-        router.refresh();
-        return;
-      }
-
-      setMessage("Check your email to confirm your account, then sign in.");
-      setMode("sign-in");
+      router.push(next);
+      router.refresh();
     } finally {
       setIsLoading(false);
     }
   }
+
+  const showSignUp = registrationOpen;
 
   return (
     <Card className="w-full max-w-sm border-border/60 bg-card/90 shadow-xl shadow-black/20">
@@ -96,38 +94,41 @@ export function LoginForm() {
           <CardDescription>
             {mode === "sign-in"
               ? "Sign in to access your private fitness assistant."
-              : "Start tracking training, nutrition, and progress."}
+              : "One-time setup for the app owner account."}
           </CardDescription>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-5">
-        <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted/50 p-1">
-          {(["sign-in", "sign-up"] as const).map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => {
-                setMode(option);
-                setMessage(null);
-              }}
-              className={cn(
-                "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                mode === option
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {option === "sign-in" ? "Sign in" : "Sign up"}
-            </button>
-          ))}
-        </div>
+        {showSignUp ? (
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted/50 p-1">
+            {(["sign-in", "sign-up"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  setMode(option);
+                  setMessage(null);
+                }}
+                className={cn(
+                  "cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  mode === option
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {option === "sign-in" ? "Sign in" : "Sign up"}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
+              name="email"
               type="email"
               autoComplete="email"
               placeholder="you@example.com"
@@ -142,6 +143,7 @@ export function LoginForm() {
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
+              name="password"
               type="password"
               autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
               placeholder="••••••••"
@@ -157,9 +159,7 @@ export function LoginForm() {
             <p
               className={cn(
                 "text-sm",
-                message.includes("Check your email")
-                  ? "text-primary"
-                  : "text-destructive"
+                message.includes("created") ? "text-primary" : "text-destructive"
               )}
             >
               {message}

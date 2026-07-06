@@ -10,3 +10,9 @@ export function formatDisplayDate(dateISO: string) {
     year: "numeric",
   });
 }
+
+export function getDaysAgoISO(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() - (days - 1));
+  return date.toLocaleDateString("en-CA");
+}

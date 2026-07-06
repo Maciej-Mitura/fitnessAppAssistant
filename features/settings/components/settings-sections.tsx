@@ -1,65 +1,50 @@
-import { PlaceholderCard } from "@/components/placeholder-card";
-import { LogoutButton } from "@/components/logout-button";
-import { Separator } from "@/components/ui/separator";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { AccountSection } from "@/features/settings/components/account-section";
+import { DangerZone } from "@/features/settings/components/danger-zone";
+import { DataExportButton } from "@/features/settings/components/data-export-button";
+import { EnvironmentSection } from "@/features/settings/components/environment-section";
 import { MacroTargetPanel } from "@/features/macros/components/macro-target-panel";
+import type { EnvironmentStatus } from "@/features/settings/types";
 import type { MacroTarget } from "@/types/macros";
 
 type SettingsSectionsProps = {
-  email?: string | null;
-  activeMacroTarget?: MacroTarget | null;
+  email: string | null;
+  userId: string | null;
+  createdAt: string | null;
+  activeMacroTarget: MacroTarget | null;
+  environmentStatus: EnvironmentStatus;
 };
-
-const settingsSections = [
-  {
-    title: "App",
-    items: ["Units", "Notifications", "Data export"],
-  },
-  {
-    title: "Privacy",
-    items: ["Local-first mode", "Delete account"],
-  },
-];
 
 export function SettingsSections({
   email,
-  activeMacroTarget = null,
+  userId,
+  createdAt,
+  activeMacroTarget,
+  environmentStatus,
 }: SettingsSectionsProps) {
   return (
     <div className="space-y-4">
-      <PlaceholderCard title="Account" description="Your sign-in details.">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">Email</span>
-            <span className="truncate font-medium">{email ?? "—"}</span>
-          </div>
-          <Separator className="opacity-50" />
-          <LogoutButton />
-        </div>
-      </PlaceholderCard>
-
+      <AccountSection email={email} userId={userId} createdAt={createdAt} />
+      <EnvironmentSection status={environmentStatus} />
       <MacroTargetPanel activeTarget={activeMacroTarget} />
 
-      {settingsSections.map((section) => (
-        <PlaceholderCard
-          key={section.title}
-          title={section.title}
-          description="Configuration options will be wired up later."
-        >
-          <div className="space-y-3">
-            {section.items.map((item, index) => (
-              <div key={item}>
-                <div className="flex items-center justify-between py-1 text-sm">
-                  <span>{item}</span>
-                  <span className="text-xs text-muted-foreground">Soon</span>
-                </div>
-                {index < section.items.length - 1 ? (
-                  <Separator className="opacity-50" />
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </PlaceholderCard>
-      ))}
+      <Card className="border-border/60 bg-card/80">
+        <CardHeader>
+          <CardTitle>Data export</CardTitle>
+          <CardDescription>Download a copy of your FitOS data.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DataExportButton />
+        </CardContent>
+      </Card>
+
+      <DangerZone />
     </div>
   );
 }

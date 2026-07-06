@@ -1,9 +1,22 @@
 import { PageHeader } from "@/components/layout/page-header";
-import { getRecentDailyLogs } from "@/features/log/queries";
-import { ProgressOverview } from "@/features/progress/components/progress-overview";
+import { getTrainingHeatmapData } from "@/features/heatmap/queries";
+import { getProgressPhotosWithSignedUrls } from "@/features/progress-photos/queries";
+import { ProgressDashboard } from "@/features/progress/components/progress-dashboard";
+import { getProgressData } from "@/features/progress/queries";
+import { parseProgressRange } from "@/features/progress/types";
 
-export default async function ProgressPage() {
-  const recentLogs = await getRecentDailyLogs(14);
+type ProgressPageProps = {
+  searchParams: Promise<{ range?: string }>;
+};
+
+export default async function ProgressPage({ searchParams }: ProgressPageProps) {
+  const params = await searchParams;
+  const range = parseProgressRange(params.range);
+  const [data, photos, heatmap] = await Promise.all([
+    getProgressData(range),
+    getProgressPhotosWithSignedUrls(),
+    getTrainingHeatmapData(range),
+  ]);
 
   return (
     <>
@@ -11,7 +24,7 @@ export default async function ProgressPage() {
         title="Progress"
         description="Visualize trends, PRs, and consistency over time."
       />
-      <ProgressOverview recentLogs={recentLogs} />
+      <ProgressDashboard data={data} range={range} photos={photos} heatmap={heatmap} />
     </>
   );
 }

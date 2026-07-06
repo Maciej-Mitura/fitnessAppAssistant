@@ -1,14 +1,17 @@
 import { PageHeader } from "@/components/layout/page-header";
-import { PlansList } from "@/features/plans/components/plans-list";
+import { PlansDashboard } from "@/features/plans/components/plans-dashboard";
+import { getPlansWithWorkouts } from "@/features/plans/queries";
 
-export default function PlansPage() {
+export default async function PlansPage() {
+  const plans = await getPlansWithWorkouts();
+
   return (
     <>
       <PageHeader
         title="Plans"
-        description="Manage training blocks, nutrition templates, and habits."
+        description="Build training blocks, set your active plan, and log workouts."
       />
-      <PlansList />
+      <PlansDashboard plans={plans} />
     </>
   );
 }

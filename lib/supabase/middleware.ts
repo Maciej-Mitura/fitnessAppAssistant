@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { isPublicPath } from "@/lib/auth/routes";
+import { isAllowedUserEmail } from "@/lib/auth/allowed-user";
+import { isApiPath, isPublicPath, LOGIN_PATH } from "@/lib/auth/routes";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -36,11 +37,29 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isPublic = isPublicPath(pathname);
-  const isLogin = pathname === "/login";
+  const isLogin = pathname === LOGIN_PATH;
+  const isApi = isApiPath(pathname);
+
+  if (user && !isAllowedUserEmail(user.email)) {
+    await supabase.auth.signOut();
+
+    if (isApi) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = LOGIN_PATH;
+    loginUrl.searchParams.set("error", "unauthorized");
+    return NextResponse.redirect(loginUrl);
+  }
 
   if (!user && !isPublic) {
+    if (isApi) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
+    loginUrl.pathname = LOGIN_PATH;
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }

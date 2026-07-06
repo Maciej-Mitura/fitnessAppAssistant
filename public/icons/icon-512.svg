@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="FitOS">
+  <rect width="512" height="512" rx="112" fill="#1a1b22"/>
+  <circle cx="256" cy="256" r="140" fill="#10b981" opacity="0.15"/>
+  <path
+    d="M148 314 L202 198 L256 272 L310 166 L364 314"
+    fill="none"
+    stroke="#34d399"
+    stroke-width="26"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <text
+    x="256"
+    y="410"
+    text-anchor="middle"
+    fill="#e2e8f0"
+    font-family="system-ui, sans-serif"
+    font-size="56"
+    font-weight="700"
+  >FitOS</text>
+</svg>

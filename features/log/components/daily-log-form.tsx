@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,14 @@ const initialState: SaveDailyLogState = {
 
 export function DailyLogForm() {
   const [state, formAction, isPending] = useActionState(saveDailyLog, initialState);
+
+  useEffect(() => {
+    if (state.success && state.message) {
+      toast.success(state.message);
+    } else if (state.error) {
+      toast.error(state.error);
+    }
+  }, [state.success, state.message, state.error]);
 
   return (
     <Card className="border-border/60 bg-card/80">
@@ -135,10 +144,10 @@ export function DailyLogForm() {
           </div>
 
           {state.error ? (
-            <p className="text-sm text-destructive">{state.error}</p>
+            <p className="sr-only">{state.error}</p>
           ) : null}
           {state.success && state.message ? (
-            <p className="text-sm text-primary">{state.message}</p>
+            <p className="sr-only">{state.message}</p>
           ) : null}
         </CardContent>
 

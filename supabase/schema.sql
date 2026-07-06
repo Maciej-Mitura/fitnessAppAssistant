@@ -21,7 +21,7 @@ $$;
 
 -- ---------------------------------------------------------------------------
 -- 1. profiles
--- ---------------------------------------------------------------------------
+-- --------------------------------------------------------------------------- 
 
 create table public.profiles (
   id uuid primary key default gen_random_uuid(),
@@ -345,8 +345,12 @@ create table public.progress_photos (
   date date not null,
   storage_path text not null,
   photo_type text not null,
+  notes text,
   ai_observation text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint progress_photos_type_check check (
+    photo_type in ('front', 'side', 'back', 'other')
+  )
 );
 
 create index progress_photos_user_id_date_idx on public.progress_photos (user_id, date desc);
@@ -411,3 +415,152 @@ create policy "special_events_delete_own"
   on public.special_events
   for delete
   using (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
+-- 10. planned_workouts
+-- ---------------------------------------------------------------------------
+
+create table public.planned_workouts (
+  id uuid primary key default gen_random_uuid(),
+  plan_id uuid not null references public.training_plans (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  name text not null,
+  sort_order int not null default 0,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create index planned_workouts_plan_id_idx on public.planned_workouts (plan_id);
+create index planned_workouts_user_id_idx on public.planned_workouts (user_id);
+
+alter table public.planned_workouts enable row level security;
+
+create policy "planned_workouts_select_own"
+  on public.planned_workouts
+  for select
+  using (auth.uid() = user_id);
+
+create policy "planned_workouts_insert_own"
+  on public.planned_workouts
+  for insert
+  with check (
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.training_plans tp
+      where tp.id = plan_id and tp.user_id = auth.uid()
+    )
+  );
+
+create policy "planned_workouts_update_own"
+  on public.planned_workouts
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "planned_workouts_delete_own"
+  on public.planned_workouts
+  for delete
+  using (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
+-- 11. planned_exercises
+-- ---------------------------------------------------------------------------
+
+create table public.planned_exercises (
+  id uuid primary key default gen_random_uuid(),
+  planned_workout_id uuid not null references public.planned_workouts (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  exercise_name text not null,
+  sets int,
+  reps text,
+  weight_kg numeric,
+  notes text,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now(),
+  constraint planned_exercises_sets_positive check (sets is null or sets > 0)
+);
+
+create index planned_exercises_workout_id_idx on public.planned_exercises (planned_workout_id);
+create index planned_exercises_user_id_idx on public.planned_exercises (user_id);
+
+alter table public.planned_exercises enable row level security;
+
+create policy "planned_exercises_select_own"
+  on public.planned_exercises
+  for select
+  using (auth.uid() = user_id);
+
+create policy "planned_exercises_insert_own"
+  on public.planned_exercises
+  for insert
+  with check (
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.planned_workouts pw
+      where pw.id = planned_workout_id and pw.user_id = auth.uid()
+    )
+  );
+
+create policy "planned_exercises_update_own"
+  on public.planned_exercises
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "planned_exercises_delete_own"
+  on public.planned_exercises
+  for delete
+  using (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
+-- 12. progress_photos storage (private bucket)
+-- ---------------------------------------------------------------------------
+-- Run after creating the progress_photos table. Photos are never public;
+-- the app serves them via short-lived signed URLs for the authenticated owner.
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'progress-photos',
+  'progress-photos',
+  false,
+  10485760,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+create policy "progress_photos_storage_insert_own"
+  on storage.objects
+  for insert
+  to authenticated
+  with check (
+    bucket_id = 'progress-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "progress_photos_storage_select_own"
+  on storage.objects
+  for select
+  to authenticated
+  using (
+    bucket_id = 'progress-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "progress_photos_storage_delete_own"
+  on storage.objects
+  for delete
+  to authenticated
+  using (
+    bucket_id = 'progress-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Migration for existing databases:
+-- alter table public.progress_photos add column if not exists notes text;
+-- alter table public.progress_photos drop constraint if exists progress_photos_type_check;
+-- alter table public.progress_photos add constraint progress_photos_type_check
+--   check (photo_type in ('front', 'side', 'back', 'other'));

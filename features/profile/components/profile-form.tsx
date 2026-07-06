@@ -88,7 +88,7 @@ export function ProfileForm({ email, profile, latestWeight }: ProfileFormProps) 
           </CardDescription>
         </CardHeader>
 
-        <form action={formAction}>
+        <form action={formAction} key={profile?.updated_at ?? profile?.id ?? "new"}>
           <CardContent className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="display_name">Display name</Label>

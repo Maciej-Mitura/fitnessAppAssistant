@@ -7,6 +7,8 @@ export type DailyLog = {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  ai_summary: string | null;
+  ai_feedback: string | null;
   created_at: string;
 };
 

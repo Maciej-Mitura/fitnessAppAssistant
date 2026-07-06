@@ -60,7 +60,10 @@ export function MacroTargetForm({
         </CardDescription>
       </CardHeader>
 
-      <form action={formAction}>
+      <form
+        action={formAction}
+        key={activeTarget ? `${activeTarget.active_from}-${activeTarget.calories}` : "new"}
+      >
         <CardContent className="space-y-5">
           {showCurrentSummary && activeTarget ? (
             <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-sm">
