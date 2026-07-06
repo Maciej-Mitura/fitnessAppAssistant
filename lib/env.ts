@@ -10,10 +10,29 @@ export type ClientEnv = {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: string;
 };
 
+/** Strip whitespace — hosting dashboards often wrap long JWT keys across lines. */
+export function sanitizeSecret(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return value.replace(/\s/g, "");
+}
+
+export function sanitizeUrl(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return value.trim().replace(/[\r\n]+/g, "");
+}
+
 function readClientEnv() {
   return {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_SUPABASE_URL: sanitizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: sanitizeSecret(
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ),
   };
 }
 

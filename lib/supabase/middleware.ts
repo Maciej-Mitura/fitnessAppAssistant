@@ -3,16 +3,16 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { isAllowedUserEmail } from "@/lib/auth/allowed-user";
 import { isApiPath, isPublicPath, LOGIN_PATH } from "@/lib/auth/routes";
+import { getPublicSupabaseEnv, hasClientEnv } from "@/lib/env";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
+  if (!hasClientEnv()) {
     return supabaseResponse;
   }
+
+  const { url, anonKey } = getPublicSupabaseEnv();
 
   const supabase = createServerClient(url, anonKey, {
     cookies: {

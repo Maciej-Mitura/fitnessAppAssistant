@@ -1,5 +1,7 @@
 import "server-only";
 
+import { sanitizeSecret } from "@/lib/env";
+
 /**
  * Server-only secrets. Never import this file from Client Components.
  */
@@ -11,8 +13,9 @@ export type ServerEnv = {
 
 function readServerEnv() {
   return {
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: sanitizeSecret(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    OPENAI_API_KEY: sanitizeSecret(process.env.OPENAI_API_KEY),
+    ALLOWED_USER_EMAIL: process.env.ALLOWED_USER_EMAIL?.trim().toLowerCase(),
   };
 }
 
@@ -53,7 +56,7 @@ export function getServerEnv(): ServerEnv {
 }
 
 export function getSupabaseServiceRoleKey(): string {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = sanitizeSecret(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   if (!key) {
     throw new Error(
@@ -65,7 +68,7 @@ export function getSupabaseServiceRoleKey(): string {
 }
 
 export function getOpenAIApiKey(): string {
-  const key = process.env.OPENAI_API_KEY;
+  const key = sanitizeSecret(process.env.OPENAI_API_KEY);
 
   if (!key) {
     throw new Error(
